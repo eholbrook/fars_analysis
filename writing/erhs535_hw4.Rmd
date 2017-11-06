@@ -1,0 +1,12 @@
+---
+title: "ERHS 535 HW 4"
+author: "Elle Holbrook"
+date: "October 18, 2017"
+output: word_document
+---
+
+# Questions about the article
+
+1. The observational unit used in this article is the presence of alcohol and nonalcohol drugs in the drivers in question. The data file used in this study was the "person" dataset.
+
+2. This study's analysis was limited to drivers who had detectable levels of alcohol or nonalcohol drugs in their system who died within 1 hour of the accident between the years 1999 - 2010 in 6 US states (California, Hawaii, Illinois, New Hampshire, Rhode Island, West Virginia). The variables to be used in `filter` statements for cleaning the dataset and their respective values to keep are: `SEAT_POS`, `11` (front seat, left side); `STATE`, `6, 15, 17, 33, 44 and 54` (CA, HI, IL, NH, RI, WV). The year is also important in this analysis, but the datasets are separated into different files by year, thus it isn't a variable to filter by.
