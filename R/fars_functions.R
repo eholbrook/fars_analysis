@@ -1,26 +1,84 @@
-# Use the following code only if you downloaded .dbf files by hand, instead of
-# writing them out as .csv files using R. The fars_dbf_to_csv function reads
-# in .dbf files as data frames, and then writes them as csv files to the
-# "data-raw/yearly_person_data" directory. The `map` step iterates the
-# function across all of the .dbf files saved in the
-# "data-raw/yearly_person_data" directory.
-fars_dbf_to_csv <- function(year) {
-  # Save the directory where .dbf files are saved.
-  dir <- "data-raw/yearly_person_data"
-  # Read the .dbf file for a year into R.
-  person_data <- foreign::read.dbf(paste0(dir,"/PERSON_", year, ".DBF"))
-  # Save each file as a csv to the "data-raw/yearly_person_data" directory.
-  person_file <- paste0("data-raw/yearly_person_data/person_", year, ".csv")
-  readr::write_csv(person_data,
-                   path = person_file)
-  # Return NULL so that the function doesn't print out anything.
-  return(NULL)
-}#Iterate the fars_dbf_to_csv across all files.
-purrr::map(1999:2010, fars_dbf_to_csv)
-
-
-
 # function to create a 95% confidence interval
 perc_cis <- function(x, n) {
   
+  prob <- (x / n)
+  SE <- sqrt((prob*(1-prob)/n))
+  CI_lower <- prob - (1.96 * (SE*prob))
+  CI_upper <- prob + (1.96 * (SE*prob))
+  
+  CI_lower_perc <- round(CI_lower*100, digits = 1)
+  CI_upper_perc <- round(CI_upper*100, digits = 1)
+  prob_perc <- round(prob*100, digits = 1)
+  print_out <- paste0(prob_perc, "%", " (", CI_lower_perc, "%",", ", CI_upper_perc, "%", ")")
+  print_out
+}
+
+
+#function for testing for trend using Cochran-Armitage trend test
+test_trend_ca <- function(drug, df = clean_fars){
+  if(drug == "Nonalcohol") {
+    
+    nonalcohol <- df %>% 
+      mutate(alchyesno = drug_type != "Alcohol") %>% 
+      filter(alchyesno == "TRUE") %>%
+      group_by(unique_id, year) %>% 
+      summarize(positive_for_drug = any(positive_for_drug, na.rm = TRUE)) %>% 
+      ungroup() %>% 
+      mutate(drug_type = "Nonalcohol") %>%
+      group_by(year) %>%
+      summarize(positive = sum(positive_for_drug, na.rm = TRUE),
+                trials = sum(!is.na(positive_for_drug)))
+    ca_alcohol <- prop.trend.test(x = nonalcohol$positive,
+                                  n = nonalcohol$trials)
+    ca_alcohol <- data.frame(Z = sqrt(ca_alcohol$statistic), p.value = ca_alcohol$p.value)
+    row.names(ca_alcohol) <- NULL
+    as_tibble(ca_alcohol)  
+  }
+  else {
+    to_test <- df %>%
+      filter(drug_type == drug) %>%
+      group_by(year) %>%
+      summarize(positive = sum(positive_for_drug, na.rm = TRUE),
+                trials = sum(!is.na(positive_for_drug)))
+    ca_alcohol <- prop.trend.test(x = to_test$positive,
+                                  n = to_test$trials)
+    
+    ca_alcohol <- data.frame(Z = sqrt(ca_alcohol$statistic), p.value = ca_alcohol$p.value)
+    row.names(ca_alcohol) <- NULL
+    as_tibble(ca_alcohol)
+  }
+}
+
+
+#function for testing for trend using logistic regression
+test_trend_log_reg <- function(drug, df = clean_fars){
+  if(drug == "Nonalcohol") {
+    
+    nonalcohol <- df %>% 
+      mutate(alchyesno = drug_type != "Alcohol") %>% 
+      filter(alchyesno == "TRUE") %>%
+      group_by(unique_id, year) %>% 
+      summarize(positive_for_drug = any(positive_for_drug, na.rm = TRUE)) %>% 
+      ungroup() %>% 
+      mutate(drug_type = "Nonalcohol")
+    log_reg <- glm(positive_for_drug ~ year, data = nonalcohol,
+                   family = binomial(link = "logit"))
+    x <- summary(log_reg)$coefficients
+    x = as.data.frame(x)
+    x %>% 
+      slice(2) %>% 
+      select(3:4)    
+    
+  }
+  else {
+    alcohol <- df %>%
+      filter(drug_type == drug)
+    log_reg <- glm(positive_for_drug ~ year, data = alcohol,
+                   family = binomial(link = "logit"))
+    x <- summary(log_reg)$coefficients 
+    x = as.data.frame(x)
+    x %>% 
+      slice(2) %>% 
+      select(3:4)
+  }
 }

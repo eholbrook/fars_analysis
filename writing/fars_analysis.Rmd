@@ -4,13 +4,17 @@ author: "Elle Holbrook"
 date: "11/5/2017"
 output: pdf_document
 ---
+```{r messages = FALSE, warnings = FALSE}
+library(tidyverse)
+library(ggthemes)
+
+load("../data/clean_fars.RData")
+source("../R/fars_functions.R")
+```
+
+
 
 ```{r}
-load("../data/clean_fars.RData")
-dim(clean_fars)
-length(unique(clean_fars$unique_id))
-summary(clean_fars)
-
 clean_fars %>%
   mutate(year_cat = cut(year, breaks = c(1999, 2002, 2006, 2010),
                         labels = c("1999-2002", "2003-2006",
@@ -28,5 +32,73 @@ clean_fars %>%
                              "F 2003-2006", "F 2007-2010",
                              "M 1999-2002", "M 2003-2006",
                              "M 2007-2010"))
+```
+
+```{r recreating figure 1}
+fig1_data <- clean_fars %>% 
+  filter(!drug_type == "Alcohol",
+         !is.na(positive_for_drug),
+         !is.na(agecat)) %>% 
+  select(unique_id, drug_type, year, agecat, positive_for_drug) %>% 
+  group_by(year, agecat, unique_id) %>% 
+  summarize(positive = any(positive_for_drug)) %>% 
+  ungroup() %>% 
+  group_by(year, agecat) %>% 
+  summarize(perc = 100 * mean(positive))
+
+fig1_data %>% 
+  ggplot(aes(x = year, y = perc)) +
+  geom_line(aes(linetype = agecat)) +
+  labs(x = "Year", 
+       y = "Positive for nonalcohol drugs, %",
+       linetype = "Age") +
+  ggtitle("Figure 1: Prevalence of nonalcohol drugs in fatally injured 
+          drivers by year and age group") +
+  theme_few()
+```
+
+```{r recreating figure 2}
+fig2_data <- clean_fars %>% 
+  filter(!drug_type == "Alcohol",
+         !is.na(positive_for_drug)) %>%
+  select(unique_id, drug_type, year, positive_for_drug) %>% 
+  group_by(year, drug_type, unique_id) %>% 
+  summarize(positive = any(positive_for_drug)) %>% 
+  ungroup() %>% 
+  group_by(year, drug_type) %>% 
+  summarize(perc = 100 * mean(positive))
+  
+fig2_data %>% 
+  ggplot(aes(x = year, y = perc)) +
+  geom_line(aes(linetype = drug_type)) +
+  labs(x = "Year",
+       y = "Positive for Drugs, %",
+       linetype = "Drug type") +
+  ggtitle("Figure 2: Prevalence of nonalcohol drugs in fatally injured 
+          drivers by year and drug type") +
+  theme_few()
+```
+
+```{r recreating figure 3}
+fig3_data <- clean_fars %>% 
+  filter(drug_type == "Cannabinoid",
+         !is.na(positive_for_drug),
+         !is.na(agecat)) %>% 
+  select(unique_id, drug_type, agecat, year, positive_for_drug) %>% 
+  group_by(year, unique_id, agecat) %>% 
+  summarize(positive = any(positive_for_drug)) %>% 
+  ungroup() %>% 
+  group_by(year, agecat) %>% 
+  summarize(perc = 100 * mean(positive))
+
+fig3_data %>% 
+  ggplot(aes(x = year, y = perc)) +
+  geom_line(aes(linetype = agecat)) +
+  labs(x = "Year",
+       y = "Positive for Cannabinoid, %",
+       linetype = "Age") +
+  ggtitle("Figure 3: Prevalence of cannabinoid drugs in fatally injured 
+          drivers by year and age group") +
+  theme_few()
 ```
 
