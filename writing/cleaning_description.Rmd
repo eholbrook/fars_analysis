@@ -125,3 +125,32 @@ clean_fars <- map_df(1999:2010, clean_yearly_person_file)
 save(clean_fars, file = "data/clean_fars.RData")
 ```
 
+# Cleaning steps descriptions:
+1. Read in the data using a relative pathname to the data-raw subdirectory. Allows for reading in all person_year.csv files at once by allowing for variation in the 4-digit year.
+
+2. The `tolower` function from `base` R allows us to change the characters in a string to all lowercase. This is desirable in order to comply with the style guidelines and make the column headers/variable names easier to work with in our coding.
+
+3. Using the `select` function lets us keep only the variables of interest for our analysis. This just makes it easier to work with a dataframe so you don't have a bunch of extraneous information that you won't actually end up using, but doesn't require you to remove those variables from the original dataset.
+
+4. In this analysis we only want to look at drivers who died in their respective car crashes, so limiting to `per_type == 1` and `inj_sev == 4` removes accidents for which these criteria don't apply. Since we limit the dataframe to only include the driver and fatal crashes, we can then remove these variables from the dataframe because we know that all remaining observations meet the criteria we're interested in.
+
+5. Here we `unite` three different columns to create a unique identifier for each observation. In order for each of these IDs to be unique, the new ID column must combine `st_case`, `per_no` and `veh_no` along with the year. By uniting these 4 pieces of information, we can create a new column, `unique_id` to identify each unit of observation in one column rather than 3 columns within separate spreadsheets.
+
+6. As in step 3, we only want to look at data from certain states. We can limit our dataframe to only include those states and then remove the `state` column in order to exclude extraneous and unnecessary information.
+
+7. The FARS dataset uses numerical coding for `sex` so we need to change it to a factor. It also uses a number for unknown values of `sex` by using the number 9. In this step, we use the `ifelse` function to tell R to look for instances where `sex == 9` (unknown). If this is true, replace with an NA. If this is not true, use the value of `sex`, either "Male" or "Female."
+
+8. We also want to create a column that indicates the presence or absence of alcohol in a crash event. Using the `ifelse` function again, we can recode missing values by telling R to look for instances where the `alc_res` column has above a certain value (94) and mark those as NAs; if this condition isn't met, use the value from the column divided by 10. We can then put this information into a new column, `Alcohol`, which will indicate a decimal value of blood alcohol content greater than 0.01. Once we have this new column, we can remove the `alc_res` column.
+
+9. The `lag_mins` column is another that contains numerically-coded missing values. We once again use the `ifelse` function to change a lag value of 99 to NA. If the `lag_mins` value is not 99, we'd like to keep it for use in the analysis.
+
+10. Similar to our previous uses of the `ifelse` function, the `lag_hrs` column also has missing data that needs to be converted to NAs. However, the encoding method for missing values in this column changed between 2008 and 2009. So here we tell R to look for `lag_hrs` equal to 99 or 999 up to 2008 and equal to 999 in 2009 and later.
+
+11. 
+
+
+
+
+
+
+
